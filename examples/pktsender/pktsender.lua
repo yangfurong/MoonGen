@@ -1,10 +1,10 @@
 --- This script implements a simple QoS test by generating two flows and measuring their latencies.
-local mg	    = require "moongen" 
-local memory	= require "memory"
-local device	= require "device"
-local filter	= require "filter"
-local stats		= require "stats"
-local log		= require "log"
+local mg        = require "moongen" 
+local memory    = require "memory"
+local device    = require "device"
+local filter    = require "filter"
+local stats     = require "stats"
+local log       = require "log"
 local ffi       = require "ffi"
 local pipe      = require "pipe"
 local barrier   = require "barrier"
@@ -93,11 +93,11 @@ end
 
 function master(args)
     local devs = parseDevList(args.devList)
-	-- wait until the links are up
-	device.waitForLinks()
+    -- wait until the links are up
+    device.waitForLinks()
     log:info("PortList: %s", args.devList)
-	log:info("Sending %d MBit/s traffic per port", args.rate)
-	-- setup rate limiters for CBR traffic
+    log:info("Sending %d MBit/s traffic per port", args.rate)
+    -- setup rate limiters for CBR traffic
     for _, dev in ipairs(devs) do
         for i = 0, TXQUEUE_NB - 1 do
             dev:getTxQueue(i):setRate(args.rate)
@@ -119,18 +119,18 @@ function master(args)
         -- launch tasks
         for _, dev in ipairs(devs) do
             for i = 0, TXQUEUE_NB - 1 do
-    		    mg.startTask("loadSlave", dev:getTxQueue(i), args.pktSize, string.format("P%d_Q%d", _ - 1, i), fastPipe, bar)
+                mg.startTask("loadSlave", dev:getTxQueue(i), args.pktSize, string.format("P%d_Q%d", _ - 1, i), fastPipe, bar)
             end
         end
-	end
+    end
     ---- start rx tasks
     --for _, dev in ipairs(devs) do
     --    for i = 0, RXQUEUE_NB - 1 do
     --        mg.startTask("rxSlave", dev:getRxQueue(i), string.format("P%d_Q%d", _ - 1, i), bar)
     --    end
     --end
-	-- wait until all tasks are finished
-	mg.waitForTasks()
+    -- wait until all tasks are finished
+    mg.waitForTasks()
     memory.free(pt.tuples)
     memory.free(pt)
 end
@@ -138,28 +138,28 @@ end
 function loadSlave(queue, pktSize, taskName, fastPipe, bar)
     bar:wait()
     log:info("loadSlave[%s] running...", taskName)
-	-- TODO: implement barriers
+    -- TODO: implement barriers
     -- trim CRC
     local pktSize = pktSize - 4 
     local pt = ffi.cast("struct pktTraces_t*", fastPipe:recv())
-	local mem = memory.createMemPool(function(buf)
-		buf:getUdpPacket():fill{
-			pktLength = pktSize, -- this sets all length headers fields in all used protocols
-			ethSrc = queue, -- get the src mac from the device
-			-- payload will be initialized to 0x00 as new memory pools are initially empty
-		}
-	end)
-	-- TODO: fix per-queue stats counters to use the statistics registers here
-	-- a buf array is essentially a very thing wrapper around a rte_mbuf*[], i.e. an array of pointers to packet buffers
-	local bufs = mem:bufArray()
+    local mem = memory.createMemPool(function(buf)
+        buf:getUdpPacket():fill{
+            pktLength = pktSize, -- this sets all length headers fields in all used protocols
+            ethSrc = queue, -- get the src mac from the device
+            -- payload will be initialized to 0x00 as new memory pools are initially empty
+        }
+    end)
+    -- TODO: fix per-queue stats counters to use the statistics registers here
+    -- a buf array is essentially a very thing wrapper around a rte_mbuf*[], i.e. an array of pointers to packet buffers
+    local bufs = mem:bufArray()
     local traceIndex = 0
-	while mg.running() do
-		-- allocate buffers from the mem pool and store them in this array
-		bufs:alloc(pktSize)
-		for _, buf in ipairs(bufs) do
-			-- modify some fields here
+    while mg.running() do
+        -- allocate buffers from the mem pool and store them in this array
+        bufs:alloc(pktSize)
+        for _, buf in ipairs(bufs) do
+            -- modify some fields here
             local tuple = pt.tuples[traceIndex]
-			if(tuple.proto == 6) then
+            if(tuple.proto == 6) then
                 local pkt = buf:getTcpPacket()
                 pkt.ip4:setSrc(tuple.srcIP)
                 pkt.ip4:setDst(tuple.dstIP)
@@ -179,11 +179,11 @@ function loadSlave(queue, pktSize, taskName, fastPipe, bar)
             if(traceIndex >= pt.n) then
                 traceIndex = 0
             end
-		end
-		-- send packets
-		-- txCtr:updateWithSize(queue:send(bufs), pktSize)
+        end
+        -- send packets
+        -- txCtr:updateWithSize(queue:send(bufs), pktSize)
         queue:send(bufs)
-	end
+    end
 end
 
 --function rxSlave(queue, taskName, bar)
