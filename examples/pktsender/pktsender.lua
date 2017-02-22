@@ -1,5 +1,5 @@
 --- This script implements a simple QoS test by generating two flows and measuring their latencies.
-local mg		= require "moongen" 
+local mg	    = require "moongen" 
 local memory	= require "memory"
 local device	= require "device"
 local filter	= require "filter"
